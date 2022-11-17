@@ -23,12 +23,12 @@ class CAboutDlg : public CDialogEx
 public:
 	CAboutDlg();
 
-// 对话框数据
+	// 对话框数据
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_ABOUTBOX };
 #endif
 
-	protected:
+protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
 
 // 实现
@@ -76,64 +76,34 @@ struct tagGetExeHwndCallbakeData {
 BOOL CALLBACK EnumChildWindowCallBack(HWND hwnd, LPARAM lParam) {
 
 	tagGetExeHwndCallbakeData* pData = (tagGetExeHwndCallbakeData*)lParam;
-	DWORD dwPid = 0;
-	GetWindowThreadProcessId(hwnd, &dwPid);
-	TCHAR szTitle[256] = _T("");
-	SendMessage(hwnd, WM_GETTEXT, 256, (LPARAM)szTitle);
-	TCHAR szClass[256] = _T("");
-
+	TCHAR claName[200];
+	TCHAR titleName[200];
+	GetClassNameW(hwnd, claName, MAX_PATH);
+	GetWindowTextW(hwnd, titleName, MAX_PATH);
 	CString strClass, strTitle;
 	strClass = _T("MKSEmbedded");
 	strTitle = _T("MKSWindow#0");
-	if (pData->strClass == strClass && pData->strTitle == strTitle)
+	if (pData->strClass == claName && pData->strTitle == titleName)
 	{
 		*(pData->pHwnd) = hwnd;
-		return TRUE;
+		return FALSE;
 	}
-	EnumChildWindows(hwnd, EnumChildWindowCallBack, lParam);
 	return TRUE;
 }
 
 
-
-BOOL CALLBACK EnumWindowsCallBack(HWND hwnd, LPARAM lParam) {
-
-	DWORD dwPid = 0;
-	GetWindowThreadProcessId(hwnd, &dwPid);
-	tagGetExeHwndCallbakeData* pData = (tagGetExeHwndCallbakeData*)lParam;
-	if (dwPid == pData->pid)
-		EnumChildWindows(hwnd, EnumWindowsCallBack, lParam);
-	return TRUE;
-}
-//根据进程名称查找句柄
-HWND GetExeHwnd(CString exeName, CString strClass, CString strTitle)
+//根据vm顶级窗口找子窗口
+HWND GetExeHwnd(HWND hwnd, CString strClass, CString strTitle)
 {
 	DWORD pid = 0;
-	PROCESSENTRY32 pe;
-	pe.dwSize = sizeof(PROCESSENTRY32);
-	HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-
-	do
-	{
-		if (!Process32First(hSnapshot, &pe))
-		{
-			return 0;
-		}
-	} while (_tcscmp(pe.szExeFile, exeName));
-
-	pid = pe.th32DefaultHeapID;
-
 	HWND iRetHwnd = 0;
 	tagGetExeHwndCallbakeData* pCallBackData = new tagGetExeHwndCallbakeData;
 	pCallBackData->pid = pid;
 	pCallBackData->strClass = strClass;
 	pCallBackData->strTitle = strTitle;
 	pCallBackData->pHwnd = &iRetHwnd;
-
-	EnumWindows(EnumWindowsCallBack, (LPARAM)pCallBackData);
-
+	EnumChildWindows(hwnd, EnumChildWindowCallBack, (LPARAM)pCallBackData);
 	return *(pCallBackData->pHwnd);
-
 }
 
 
@@ -300,14 +270,21 @@ void Cc9Dlg::OnBnClickedButton1()
 
 	//查找虚拟机窗口
 	HWND vm = ::FindWindow(L"VMUIFrame", L"Windows 7 x64 -15 的克隆1 - VMware Workstation");//主虚拟机句柄
-
-
-	DWORD vmid = 0;//vm主窗口
-	GetWindowThreadProcessId(vm, &vmid);
-	if (vmid != 0)
+	if (vm == NULL)
 	{
 		return;
-
 	}
-	//测试推送
+	//vm子窗口
+	HWND iVm = GetExeHwnd(vm, _T("MKSEmbedded"), _T("MKSWindow#0"));
+	if (iVm == NULL)
+	{
+		return;
+	}
+	//绑定大漠
+	DWORD ret = dm->BindWindowEx((long)iVm,_T("normal"), _T("normal"), _T("normal"), _T(""),0);
+	if (ret==0)
+	{
+		return;
+	}
+
 }
