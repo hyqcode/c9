@@ -307,6 +307,7 @@ void Cc9Dlg::OnBnClickedButton1()
 	if (vmid != 0)
 	{
 		return;
+
 	}
 
 }
